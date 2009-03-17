@@ -25,6 +25,7 @@ module ActiveSupport
       def initialize(*addresses)
         addresses.flatten!
         options = addresses.extract_options!
+        @untaint = options.delete :untaint
         addresses = %w(localhost) if addresses.empty?
 
         @addresses = addresses
@@ -33,14 +34,15 @@ module ActiveSupport
 
       def read(key, options = nil)
         super
-        @cache.get(key, marshal?(options))
+        val = @cache.get(key, marshal?(options))
+        @untaint ? val.untaint : val
       rescue Memcached::NotFound
         nil
       rescue Memcached::Error => e
         log_error(e)
         nil
       end
-
+	  
       # Set the key to the given value. Pass :unless_exist => true if you want to
       # skip setting a key that already exists.
       def write(key, value, options = nil)
